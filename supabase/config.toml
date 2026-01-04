@@ -1,1 +1,4 @@
 project_id = "sdolhkttgkqkatyhssjl"
+
+[functions.analyze-baldness]
+verify_jwt = false
