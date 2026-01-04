@@ -31,7 +31,17 @@ function generateOAuthSignature(
   return hmacSha1.update(signatureBaseString).digest("base64");
 }
 
-function generateOAuthHeader(method: string, url: string): string {
+function generateOAuthHeader(method: string, fullUrl: string): string {
+  // Parse URL to separate base URL and query params
+  const urlObj = new URL(fullUrl);
+  const baseUrl = `${urlObj.origin}${urlObj.pathname}`;
+  
+  // Get query params
+  const queryParams: Record<string, string> = {};
+  urlObj.searchParams.forEach((value, key) => {
+    queryParams[key] = value;
+  });
+
   const oauthParams: Record<string, string> = {
     oauth_consumer_key: API_KEY!,
     oauth_nonce: Math.random().toString(36).substring(2),
@@ -41,7 +51,9 @@ function generateOAuthHeader(method: string, url: string): string {
     oauth_version: "1.0",
   };
 
-  const signature = generateOAuthSignature(method, url, oauthParams, API_SECRET!, ACCESS_TOKEN_SECRET!);
+  // Include query params in signature calculation (required for GET requests with params)
+  const allParams = { ...oauthParams, ...queryParams };
+  const signature = generateOAuthSignature(method, baseUrl, allParams, API_SECRET!, ACCESS_TOKEN_SECRET!);
 
   const signedOAuthParams = { ...oauthParams, oauth_signature: signature };
   const entries = Object.entries(signedOAuthParams).sort((a, b) => a[0].localeCompare(b[0]));
@@ -51,7 +63,7 @@ function generateOAuthHeader(method: string, url: string): string {
 
 async function getTwitterUser(username: string) {
   const url = `https://api.x.com/2/users/by/username/${username}?user.fields=profile_image_url,description,name`;
-  const oauthHeader = generateOAuthHeader("GET", url.split("?")[0]);
+  const oauthHeader = generateOAuthHeader("GET", url);
 
   const response = await fetch(url, {
     method: "GET",
